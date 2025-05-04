@@ -37,6 +37,7 @@ const Index = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalDoctors, setTotalDoctors] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     specialty: "",
     location: "",
@@ -54,7 +55,7 @@ const Index = () => {
 
   useEffect(() => {
     fetchDoctors();
-  }, [currentPage, filters, sortBy]);
+  }, [currentPage, filters, sortBy, searchTerm]);
 
   const fetchDoctors = async () => {
     try {
@@ -64,6 +65,11 @@ const Index = () => {
       let query = supabase
         .from("doctors")
         .select("*", { count: "exact" });
+      
+      // Apply search term filter (search in name, specialty, location)
+      if (searchTerm.trim()) {
+        query = query.or(`name.ilike.%${searchTerm}%,specialty.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`);
+      }
       
       // Apply filters
       if (filters.specialty) {
@@ -86,9 +92,10 @@ const Index = () => {
         query = query.eq("gender", filters.gender);
       }
 
-      // Filter by language (if array contains any of selected languages)
+      // Filter by language (contains any of selected languages)
       if (filters.language.length > 0) {
-        query = query.contains("languages", filters.language);
+        // Using containsAny for array overlap - at least one language matches
+        query = query.overlaps("languages", filters.language);
       }
 
       // Filter by facility (clinic name)
@@ -96,30 +103,10 @@ const Index = () => {
         query = query.in("clinic_name", filters.facility);
       }
 
-      // Filter by availability (days available)
+      // Filter by availability (days available) 
       if (filters.availability.length > 0) {
-        query = query.contains("available_days", filters.availability);
-      }
-
-      // Filter by fees range
-      if (filters.fees.length > 0) {
-        // Process each fee range
-        const feeConditions = filters.fees.map(feeRange => {
-          if (feeRange === "100-300") {
-            return query.gte("fee", 100).lte("fee", 300);
-          } else if (feeRange === "300-500") {
-            return query.gte("fee", 300).lte("fee", 500);
-          } else if (feeRange === "500-800") {
-            return query.gte("fee", 500).lte("fee", 800);
-          } else if (feeRange === "800-1000") {
-            return query.gte("fee", 800).lte("fee", 1000);
-          } else if (feeRange === "1000+") {
-            return query.gte("fee", 1000);
-          }
-        });
-
-        // Apply the fee filters as OR conditions
-        // This is complex but we'll have to process the results after fetching
+        // Using containsAny for array overlap - at least one day matches
+        query = query.overlaps("available_days", filters.availability);
       }
       
       // Apply pagination
@@ -136,7 +123,7 @@ const Index = () => {
         return;
       }
       
-      // Post-process filters that can't be applied directly in the query
+      // Post-process for fees filtering since it's a range
       let processedData = data || [];
       
       if (filters.fees.length > 0) {
@@ -177,6 +164,11 @@ const Index = () => {
     setSortBy(value);
   };
 
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page on new search
+  };
+
   const getSortLabel = () => {
     switch (sortBy) {
       case "rating": return "Relevance";
@@ -189,7 +181,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header onSearch={handleSearchChange} />
       
       <div className="border-b border-gray-200 bg-white">
         <div className="container mx-auto px-4">

@@ -1,10 +1,21 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin } from "lucide-react";
 
-export const Header = () => {
+interface HeaderProps {
+  onSearch: (searchTerm: string) => void;
+}
+
+export const Header = ({ onSearch }: HeaderProps) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch(searchTerm);
+  };
+
   return (
     <div className="bg-white shadow-sm">
       {/* Top navigation bar */}
@@ -32,14 +43,26 @@ export const Header = () => {
           
           {/* Search Bar */}
           <div className="relative flex-1 max-w-2xl mx-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                type="text" 
-                placeholder="Search Doctors, Specialities, Conditions etc." 
-                className="pl-10 pr-4 py-2 w-full"
-              />
-            </div>
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input 
+                  type="text" 
+                  placeholder="Search Doctors, Specialities, Conditions etc." 
+                  className="pl-10 pr-4 py-2 w-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Button 
+                  type="submit"
+                  size="sm"
+                  variant="ghost"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 h-7"
+                >
+                  Search
+                </Button>
+              </div>
+            </form>
           </div>
           
           {/* Login Button */}

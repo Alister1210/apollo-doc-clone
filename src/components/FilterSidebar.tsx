@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
+import { Filter } from "lucide-react"; 
 
 interface FilterSidebarProps {
   onFilterChange: (filters: any) => void;
@@ -89,7 +90,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
     
     // Extract unique languages from array fields
     const allLanguages = data.flatMap(item => item.languages || []);
-    const uniqueLanguages = [...new Set(allLanguages)].filter(Boolean);
+    const uniqueLanguages = [...new Set(allLanguages)].filter(Boolean).sort();
     setLanguages(uniqueLanguages);
   };
 
@@ -104,7 +105,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
     }
     
     // Extract unique clinic names
-    const uniqueFacilities = [...new Set(data.map(item => item.clinic_name))].filter(Boolean);
+    const uniqueFacilities = [...new Set(data.map(item => item.clinic_name))].filter(Boolean).sort();
     setFacilities(uniqueFacilities);
   };
   
@@ -124,7 +125,9 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
   };
   
   const handleExperienceChange = (years: number) => {
-    const newFilters = { ...filters, experience: years };
+    // Toggle experience filter - clear if already set to this value
+    const newExperience = filters.experience === years ? 0 : years;
+    const newFilters = { ...filters, experience: newExperience };
     setFilters(newFilters);
     onFilterChange(newFilters);
   };
@@ -175,7 +178,9 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
   };
 
   const handleGenderChange = (gender: string) => {
-    const newFilters = { ...filters, gender };
+    // Toggle gender filter if already selected
+    const newGender = filters.gender === gender ? "" : gender;
+    const newFilters = { ...filters, gender: newGender };
     setFilters(newFilters);
     onFilterChange(newFilters);
   };
@@ -218,17 +223,42 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
 
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+  // Calculate active filter count
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.gender) count++;
+    if (filters.experience > 0) count++;
+    if (filters.consultMode.length > 0) count++;
+    if (filters.fees.length > 0) count++;
+    if (filters.language.length > 0) count++;
+    if (filters.facility.length > 0) count++;
+    if (filters.availability.length > 0) count++;
+    return count;
+  };
+
+  const activeFilterCount = getActiveFilterCount();
+
   return (
     <div className="space-y-6 bg-white p-4 rounded-md shadow-sm border border-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
-        <button 
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium" 
-          onClick={clearFilters}
-        >
-          Clear All
-        </button>
+        <div className="flex items-center gap-2">
+          <Filter className="h-5 w-5 text-gray-700" />
+          <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
+          {activeFilterCount > 0 && (
+            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
+        </div>
+        {activeFilterCount > 0 && (
+          <button 
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium" 
+            onClick={clearFilters}
+          >
+            Clear All
+          </button>
+        )}
       </div>
       
       {/* Near Me Button */}
@@ -273,7 +303,14 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('gender')}>
           <h3 className="text-base font-medium">Gender</h3>
-          <span>{expanded.gender ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.gender && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.gender}
+              </span>
+            )}
+            <span>{expanded.gender ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.gender && (
           <div className="mt-3">
@@ -303,7 +340,17 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('experience')}>
           <h3 className="text-base font-medium">Experience (In Years)</h3>
-          <span>{expanded.experience ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.experience > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.experience === 5 ? '0-5' : 
+                 filters.experience === 10 ? '6-10' : 
+                 filters.experience === 15 ? '11-15' : 
+                 filters.experience === 20 ? '16-20' : '20+'}
+              </span>
+            )}
+            <span>{expanded.experience ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.experience && (
           <div className="space-y-2 mt-3">
@@ -311,7 +358,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
               <Checkbox 
                 id="exp-0-5" 
                 checked={filters.experience === 5}
-                onCheckedChange={() => handleExperienceChange(filters.experience === 5 ? 0 : 5)}
+                onCheckedChange={() => handleExperienceChange(5)}
               />
               <Label htmlFor="exp-0-5">0-5</Label>
             </div>
@@ -319,7 +366,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
               <Checkbox 
                 id="exp-6-10" 
                 checked={filters.experience === 10}
-                onCheckedChange={() => handleExperienceChange(filters.experience === 10 ? 0 : 10)}
+                onCheckedChange={() => handleExperienceChange(10)}
               />
               <Label htmlFor="exp-6-10">6-10</Label>
             </div>
@@ -327,7 +374,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
               <Checkbox 
                 id="exp-11-15" 
                 checked={filters.experience === 15}
-                onCheckedChange={() => handleExperienceChange(filters.experience === 15 ? 0 : 15)}
+                onCheckedChange={() => handleExperienceChange(15)}
               />
               <Label htmlFor="exp-11-15">11-15</Label>
             </div>
@@ -335,7 +382,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
               <Checkbox 
                 id="exp-16-20" 
                 checked={filters.experience === 20}
-                onCheckedChange={() => handleExperienceChange(filters.experience === 20 ? 0 : 20)}
+                onCheckedChange={() => handleExperienceChange(20)}
               />
               <Label htmlFor="exp-16-20">16-20</Label>
             </div>
@@ -343,7 +390,7 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
               <Checkbox 
                 id="exp-20+" 
                 checked={filters.experience === 25}
-                onCheckedChange={() => handleExperienceChange(filters.experience === 25 ? 0 : 25)}
+                onCheckedChange={() => handleExperienceChange(25)}
               />
               <Label htmlFor="exp-20+">20+</Label>
             </div>
@@ -355,7 +402,14 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('fees')}>
           <h3 className="text-base font-medium">Fees (In Rupees)</h3>
-          <span>{expanded.fees ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.fees.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.fees.length}
+              </span>
+            )}
+            <span>{expanded.fees ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.fees && (
           <div className="space-y-2 mt-3">
@@ -407,7 +461,14 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('availability')}>
           <h3 className="text-base font-medium">Availability</h3>
-          <span>{expanded.availability ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.availability.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.availability.length}
+              </span>
+            )}
+            <span>{expanded.availability ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.availability && (
           <div className="space-y-2 mt-3">
@@ -429,7 +490,14 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('language')}>
           <h3 className="text-base font-medium">Language</h3>
-          <span>{expanded.language ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.language.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.language.length}
+              </span>
+            )}
+            <span>{expanded.language ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.language && (
           <div className="space-y-2 mt-3">
@@ -451,7 +519,14 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
       <div className="border-t pt-4">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('facility')}>
           <h3 className="text-base font-medium">Facility</h3>
-          <span>{expanded.facility ? '−' : '+'}</span>
+          <div className="flex items-center">
+            {filters.facility.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2">
+                {filters.facility.length}
+              </span>
+            )}
+            <span>{expanded.facility ? '−' : '+'}</span>
+          </div>
         </div>
         {expanded.facility && (
           <div className="space-y-2 mt-3">
