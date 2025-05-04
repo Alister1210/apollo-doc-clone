@@ -1,7 +1,8 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Star, Check, Info } from "lucide-react";
+import { Calendar, Clock, MapPin, Star, Check, Info, Languages, DollarSign } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface DoctorProps {
   doctor: {
@@ -12,6 +13,12 @@ interface DoctorProps {
     rating: number;
     location: string;
     availability: string;
+    image_url?: string;
+    fee?: number;
+    gender?: string;
+    languages?: string[];
+    clinic_name?: string;
+    available_days?: string[];
   };
 }
 
@@ -27,10 +34,11 @@ export const DoctorCard = ({ doctor }: DoctorProps) => {
   };
   
   const renderPrice = () => {
-    if (doctor.rating > 4.5) return "₹499";
-    else if (doctor.rating > 4) return "₹399";
-    else if (doctor.rating > 3.5) return "₹350";
-    return "₹299";
+    return doctor.fee ? `₹${doctor.fee.toFixed(0)}` : (
+      doctor.rating > 4.5 ? "₹499" :
+      doctor.rating > 4 ? "₹399" :
+      doctor.rating > 3.5 ? "₹350" : "₹299"
+    );
   };
   
   const renderCashback = () => {
@@ -50,14 +58,25 @@ export const DoctorCard = ({ doctor }: DoctorProps) => {
     if (specialty.includes("Pathology")) {
       return "MBBS, MD (PATHOLOGY)";
     }
+    if (specialty.includes("Cardio")) {
+      return "MBBS, MD (CARDIOLOGY)";
+    }
     return "MBBS";
   };
   
   // Calculate years of experience
   const getYearsOfExperience = (exp: number) => {
-    if (exp > 10) return "10 YEARS";
-    if (exp > 5) return "5 YEARS";
-    return "3 YEARS";
+    if (exp > 10) return "10+ YEARS";
+    if (exp > 5) return exp + " YEARS";
+    return exp + " YEARS";
+  };
+
+  const getDoctorInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -68,9 +87,12 @@ export const DoctorCard = ({ doctor }: DoctorProps) => {
           <div className="flex gap-4">
             {/* Doctor Image */}
             <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <span className="text-xl">DR</span>
-              </div>
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={doctor.image_url} alt={doctor.name} />
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  {getDoctorInitials(doctor.name)}
+                </AvatarFallback>
+              </Avatar>
             </div>
             
             <div className="flex-1">
@@ -89,20 +111,42 @@ export const DoctorCard = ({ doctor }: DoctorProps) => {
                   
                   <p className="text-sm text-gray-600 mt-1">{doctor.specialty}</p>
                   
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex">
+                      {renderStars(doctor.rating)}
+                    </div>
+                    <span className="text-xs text-gray-600">({doctor.rating})</span>
+                  </div>
+                  
                   <div className="flex items-center gap-1 mt-2 text-xs text-blue-600 font-medium">
                     <span>{getYearsOfExperience(doctor.experience)}</span>
                     <span className="text-gray-400">•</span>
                     <span>{getQualification(doctor.specialty)}</span>
                   </div>
                   
+                  {doctor.languages && doctor.languages.length > 0 && (
+                    <div className="flex items-center mt-1 text-xs text-gray-600">
+                      <Languages className="h-3 w-3 mr-1" />
+                      {doctor.languages.join(", ")}
+                    </div>
+                  )}
+                  
                   <div className="mt-2 text-sm text-gray-600">
-                    <div>{doctor.location}</div>
-                    <div className="mt-1">Apollo 24|7 Virtual Clinic - {doctor.location}</div>
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 mr-1 text-gray-400" />
+                      {doctor.location}
+                    </div>
+                    <div className="mt-1">
+                      {doctor.clinic_name || "Apollo 24|7 Virtual Clinic"} - {doctor.location}
+                    </div>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-xl font-bold">{renderPrice()}</div>
+                  <div className="flex items-center justify-end gap-1">
+                    <DollarSign className="h-4 w-4 text-blue-600" />
+                    <div className="text-xl font-bold">{renderPrice()}</div>
+                  </div>
                   
                   {cashback && (
                     <div className="flex items-center justify-end text-xs mt-1">

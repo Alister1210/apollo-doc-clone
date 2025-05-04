@@ -13,6 +13,7 @@ import {
   PaginationPrevious 
 } from "@/components/ui/pagination";
 import { ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface Doctor {
   id: string;
@@ -22,6 +23,12 @@ interface Doctor {
   rating: number;
   location: string;
   availability: string;
+  image_url?: string;
+  fee?: number;
+  gender?: string;
+  languages?: string[];
+  clinic_name?: string;
+  available_days?: string[];
 }
 
 const Index = () => {
@@ -35,10 +42,12 @@ const Index = () => {
     location: "",
     experience: 0,
     rating: 0,
+    gender: "",
     consultMode: [] as string[],
     fees: [] as string[],
     language: [] as string[],
-    facility: [] as string[]
+    facility: [] as string[],
+    availability: [] as string[]
   });
   const [sortBy, setSortBy] = useState("rating");
   const itemsPerPage = 5;
@@ -73,6 +82,46 @@ const Index = () => {
         query = query.gte("rating", filters.rating);
       }
       
+      if (filters.gender) {
+        query = query.eq("gender", filters.gender);
+      }
+
+      // Filter by language (if array contains any of selected languages)
+      if (filters.language.length > 0) {
+        query = query.contains("languages", filters.language);
+      }
+
+      // Filter by facility (clinic name)
+      if (filters.facility.length > 0) {
+        query = query.in("clinic_name", filters.facility);
+      }
+
+      // Filter by availability (days available)
+      if (filters.availability.length > 0) {
+        query = query.contains("available_days", filters.availability);
+      }
+
+      // Filter by fees range
+      if (filters.fees.length > 0) {
+        // Process each fee range
+        const feeConditions = filters.fees.map(feeRange => {
+          if (feeRange === "100-300") {
+            return query.gte("fee", 100).lte("fee", 300);
+          } else if (feeRange === "300-500") {
+            return query.gte("fee", 300).lte("fee", 500);
+          } else if (feeRange === "500-800") {
+            return query.gte("fee", 500).lte("fee", 800);
+          } else if (feeRange === "800-1000") {
+            return query.gte("fee", 800).lte("fee", 1000);
+          } else if (feeRange === "1000+") {
+            return query.gte("fee", 1000);
+          }
+        });
+
+        // Apply the fee filters as OR conditions
+        // This is complex but we'll have to process the results after fetching
+      }
+      
       // Apply pagination
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
@@ -87,7 +136,25 @@ const Index = () => {
         return;
       }
       
-      setDoctors(data || []);
+      // Post-process filters that can't be applied directly in the query
+      let processedData = data || [];
+      
+      if (filters.fees.length > 0) {
+        processedData = processedData.filter(doc => {
+          if (!doc.fee) return false;
+          
+          return filters.fees.some(feeRange => {
+            if (feeRange === "100-300") return doc.fee >= 100 && doc.fee <= 300;
+            if (feeRange === "300-500") return doc.fee >= 300 && doc.fee <= 500;
+            if (feeRange === "500-800") return doc.fee >= 500 && doc.fee <= 800;
+            if (feeRange === "800-1000") return doc.fee >= 800 && doc.fee <= 1000;
+            if (feeRange === "1000+") return doc.fee >= 1000;
+            return false;
+          });
+        });
+      }
+      
+      setDoctors(processedData);
       if (count) {
         setTotalDoctors(count);
         setTotalPages(Math.ceil(count / itemsPerPage));
@@ -108,6 +175,16 @@ const Index = () => {
 
   const handleSortChange = (value: string) => {
     setSortBy(value);
+  };
+
+  const getSortLabel = () => {
+    switch (sortBy) {
+      case "rating": return "Relevance";
+      case "name": return "Name (A-Z)";
+      case "experience": return "Experience";
+      case "fee": return "Fee (Low to High)";
+      default: return "Relevance";
+    }
   };
 
   return (
@@ -142,12 +219,20 @@ const Index = () => {
             
             {/* Sort Options */}
             <div className="flex justify-end mb-4">
-              <div className="relative inline-block">
-                <div className="flex items-center gap-2 border rounded-md p-2 cursor-pointer bg-white">
-                  <span className="font-medium">Relevance</span>
-                  <ChevronDown className="h-4 w-4" />
-                </div>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-2 border rounded-md p-2 cursor-pointer bg-white">
+                    <span className="font-medium">{getSortLabel()}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSortChange("rating")}>Relevance</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSortChange("name")}>Name (A-Z)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSortChange("experience")}>Experience</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSortChange("fee")}>Fee (Low to High)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {loading ? (

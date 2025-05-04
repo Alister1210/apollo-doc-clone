@@ -12,9 +12,15 @@ export type Database = {
       doctors: {
         Row: {
           availability: string
+          available_days: string[] | null
+          clinic_name: string | null
           created_at: string | null
           experience: number
+          fee: number | null
+          gender: string | null
           id: string
+          image_url: string | null
+          languages: string[] | null
           location: string
           name: string
           rating: number
@@ -22,9 +28,15 @@ export type Database = {
         }
         Insert: {
           availability: string
+          available_days?: string[] | null
+          clinic_name?: string | null
           created_at?: string | null
           experience: number
+          fee?: number | null
+          gender?: string | null
           id?: string
+          image_url?: string | null
+          languages?: string[] | null
           location: string
           name: string
           rating: number
@@ -32,9 +44,15 @@ export type Database = {
         }
         Update: {
           availability?: string
+          available_days?: string[] | null
+          clinic_name?: string | null
           created_at?: string | null
           experience?: number
+          fee?: number | null
+          gender?: string | null
           id?: string
+          image_url?: string | null
+          languages?: string[] | null
           location?: string
           name?: string
           rating?: number

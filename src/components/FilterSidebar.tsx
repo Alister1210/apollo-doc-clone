@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 
 interface FilterSidebarProps {
   onFilterChange: (filters: any) => void;
@@ -12,27 +14,35 @@ interface FilterSidebarProps {
     location: string;
     experience: number;
     rating: number;
+    gender: string;
     consultMode: string[];
     fees: string[];
     language: string[];
     facility: string[];
+    availability: string[];
   };
 }
 
 export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarProps) => {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [facilities, setFacilities] = useState<string[]>([]);
   const [filters, setFilters] = useState(currentFilters);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     experience: true,
     fees: true,
     language: true,
-    facility: true
+    facility: true,
+    gender: true,
+    availability: true
   });
 
   useEffect(() => {
     fetchSpecialties();
     fetchLocations();
+    fetchLanguages();
+    fetchFacilities();
   }, []);
 
   const fetchSpecialties = async () => {
@@ -65,6 +75,37 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
     // Extract unique locations
     const uniqueLocations = [...new Set(data.map(item => item.location))];
     setLocations(uniqueLocations);
+  };
+
+  const fetchLanguages = async () => {
+    const { data, error } = await supabase
+      .from("doctors")
+      .select("languages");
+      
+    if (error) {
+      console.error("Error fetching languages:", error);
+      return;
+    }
+    
+    // Extract unique languages from array fields
+    const allLanguages = data.flatMap(item => item.languages || []);
+    const uniqueLanguages = [...new Set(allLanguages)].filter(Boolean);
+    setLanguages(uniqueLanguages);
+  };
+
+  const fetchFacilities = async () => {
+    const { data, error } = await supabase
+      .from("doctors")
+      .select("clinic_name");
+      
+    if (error) {
+      console.error("Error fetching facilities:", error);
+      return;
+    }
+    
+    // Extract unique clinic names
+    const uniqueFacilities = [...new Set(data.map(item => item.clinic_name))].filter(Boolean);
+    setFacilities(uniqueFacilities);
   };
   
   const handleConsultModeChange = (mode: string) => {
@@ -133,16 +174,39 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
     onFilterChange(newFilters);
   };
 
+  const handleGenderChange = (gender: string) => {
+    const newFilters = { ...filters, gender };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
+  const handleAvailabilityChange = (day: string) => {
+    const availability = [...filters.availability];
+    const index = availability.indexOf(day);
+    
+    if (index === -1) {
+      availability.push(day);
+    } else {
+      availability.splice(index, 1);
+    }
+    
+    const newFilters = { ...filters, availability };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
   const clearFilters = () => {
     const resetFilters = {
       specialty: "",
       location: "",
       experience: 0,
       rating: 0,
+      gender: "",
       consultMode: [],
       fees: [],
       language: [],
-      facility: []
+      facility: [],
+      availability: []
     };
     setFilters(resetFilters);
     onFilterChange(resetFilters);
@@ -151,6 +215,8 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
   const toggleExpand = (section: string) => {
     setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return (
     <div className="space-y-6 bg-white p-4 rounded-md shadow-sm border border-gray-100">
@@ -192,7 +258,45 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
             />
             <Label htmlFor="online-consult">Online Consult</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox 
+              id="home-visit" 
+              checked={filters.consultMode.includes("home")}
+              onCheckedChange={() => handleConsultModeChange("home")}
+            />
+            <Label htmlFor="home-visit">Home Visit</Label>
+          </div>
         </div>
+      </div>
+
+      {/* Gender */}
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('gender')}>
+          <h3 className="text-base font-medium">Gender</h3>
+          <span>{expanded.gender ? '−' : '+'}</span>
+        </div>
+        {expanded.gender && (
+          <div className="mt-3">
+            <RadioGroup 
+              value={filters.gender} 
+              onValueChange={handleGenderChange}
+              className="flex flex-col space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Male" id="gender-male" />
+                <Label htmlFor="gender-male">Male</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Female" id="gender-female" />
+                <Label htmlFor="gender-female">Female</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Other" id="gender-other" />
+                <Label htmlFor="gender-other">Other</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        )}
       </div>
       
       {/* Experience */}
@@ -225,10 +329,23 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
                 checked={filters.experience === 15}
                 onCheckedChange={() => handleExperienceChange(filters.experience === 15 ? 0 : 15)}
               />
-              <Label htmlFor="exp-11-15">11-16</Label>
+              <Label htmlFor="exp-11-15">11-15</Label>
             </div>
-            <div className="flex items-center gap-2 text-blue-600">
-              <span className="text-sm font-medium">+1 More</span>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="exp-16-20" 
+                checked={filters.experience === 20}
+                onCheckedChange={() => handleExperienceChange(filters.experience === 20 ? 0 : 20)}
+              />
+              <Label htmlFor="exp-16-20">16-20</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="exp-20+" 
+                checked={filters.experience === 25}
+                onCheckedChange={() => handleExperienceChange(filters.experience === 25 ? 0 : 25)}
+              />
+              <Label htmlFor="exp-20+">20+</Label>
             </div>
           </div>
         )}
@@ -244,19 +361,35 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
           <div className="space-y-2 mt-3">
             <div className="flex items-center gap-2">
               <Checkbox 
-                id="fees-100-500" 
-                checked={filters.fees.includes("100-500")}
-                onCheckedChange={() => handleFeesChange("100-500")}
+                id="fees-100-300" 
+                checked={filters.fees.includes("100-300")}
+                onCheckedChange={() => handleFeesChange("100-300")}
               />
-              <Label htmlFor="fees-100-500">100-500</Label>
+              <Label htmlFor="fees-100-300">₹100-₹300</Label>
             </div>
             <div className="flex items-center gap-2">
               <Checkbox 
-                id="fees-500-1000" 
-                checked={filters.fees.includes("500-1000")}
-                onCheckedChange={() => handleFeesChange("500-1000")}
+                id="fees-300-500" 
+                checked={filters.fees.includes("300-500")}
+                onCheckedChange={() => handleFeesChange("300-500")}
               />
-              <Label htmlFor="fees-500-1000">500-1000</Label>
+              <Label htmlFor="fees-300-500">₹300-₹500</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="fees-500-800" 
+                checked={filters.fees.includes("500-800")}
+                onCheckedChange={() => handleFeesChange("500-800")}
+              />
+              <Label htmlFor="fees-500-800">₹500-₹800</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="fees-800-1000" 
+                checked={filters.fees.includes("800-1000")}
+                onCheckedChange={() => handleFeesChange("800-1000")}
+              />
+              <Label htmlFor="fees-800-1000">₹800-₹1000</Label>
             </div>
             <div className="flex items-center gap-2">
               <Checkbox 
@@ -264,8 +397,30 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
                 checked={filters.fees.includes("1000+")}
                 onCheckedChange={() => handleFeesChange("1000+")}
               />
-              <Label htmlFor="fees-1000+">1000+</Label>
+              <Label htmlFor="fees-1000+">₹1000+</Label>
             </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Availability */}
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand('availability')}>
+          <h3 className="text-base font-medium">Availability</h3>
+          <span>{expanded.availability ? '−' : '+'}</span>
+        </div>
+        {expanded.availability && (
+          <div className="space-y-2 mt-3">
+            {weekDays.map(day => (
+              <div key={day} className="flex items-center gap-2">
+                <Checkbox 
+                  id={`day-${day.toLowerCase()}`} 
+                  checked={filters.availability.includes(day)}
+                  onCheckedChange={() => handleAvailabilityChange(day)}
+                />
+                <Label htmlFor={`day-${day.toLowerCase()}`}>{day}</Label>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -278,33 +433,16 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
         </div>
         {expanded.language && (
           <div className="space-y-2 mt-3">
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="lang-english" 
-                checked={filters.language.includes("English")}
-                onCheckedChange={() => handleLanguageChange("English")}
-              />
-              <Label htmlFor="lang-english">English</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="lang-hindi" 
-                checked={filters.language.includes("Hindi")}
-                onCheckedChange={() => handleLanguageChange("Hindi")}
-              />
-              <Label htmlFor="lang-hindi">Hindi</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="lang-telugu" 
-                checked={filters.language.includes("Telugu")}
-                onCheckedChange={() => handleLanguageChange("Telugu")}
-              />
-              <Label htmlFor="lang-telugu">Telugu</Label>
-            </div>
-            <div className="flex items-center gap-2 text-blue-600">
-              <span className="text-sm font-medium">+10 More</span>
-            </div>
+            {languages.map(language => (
+              <div key={language} className="flex items-center gap-2">
+                <Checkbox 
+                  id={`lang-${language.toLowerCase()}`} 
+                  checked={filters.language.includes(language)}
+                  onCheckedChange={() => handleLanguageChange(language)}
+                />
+                <Label htmlFor={`lang-${language.toLowerCase()}`}>{language}</Label>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -317,22 +455,16 @@ export const FilterSidebar = ({ onFilterChange, currentFilters }: FilterSidebarP
         </div>
         {expanded.facility && (
           <div className="space-y-2 mt-3">
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="facility-apollo" 
-                checked={filters.facility.includes("Apollo Hospital")}
-                onCheckedChange={() => handleFacilityChange("Apollo Hospital")}
-              />
-              <Label htmlFor="facility-apollo">Apollo Hospital</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="facility-other" 
-                checked={filters.facility.includes("Other Clinics")}
-                onCheckedChange={() => handleFacilityChange("Other Clinics")}
-              />
-              <Label htmlFor="facility-other">Other Clinics</Label>
-            </div>
+            {facilities.map(facility => (
+              <div key={facility} className="flex items-center gap-2">
+                <Checkbox 
+                  id={`facility-${facility.toLowerCase().replace(/\s+/g, '-')}`} 
+                  checked={filters.facility.includes(facility)}
+                  onCheckedChange={() => handleFacilityChange(facility)}
+                />
+                <Label htmlFor={`facility-${facility.toLowerCase().replace(/\s+/g, '-')}`}>{facility}</Label>
+              </div>
+            ))}
           </div>
         )}
       </div>
