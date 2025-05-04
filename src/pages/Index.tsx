@@ -4,7 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { DoctorCard } from "@/components/DoctorCard";
 import { Header } from "@/components/Header";
 import { FilterSidebar } from "@/components/FilterSidebar";
-import { Pagination } from "@/components/ui/pagination";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination";
 
 interface Doctor {
   id: string;
