@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DoctorCard } from "@/components/DoctorCard";
 import { Header } from "@/components/Header";
 import { FilterSidebar } from "@/components/FilterSidebar";
+import { DoctorCard } from "@/components/DoctorCard";
 import { 
   Pagination, 
   PaginationContent, 
@@ -12,6 +12,7 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from "@/components/ui/pagination";
+import { ChevronDown } from "lucide-react";
 
 interface Doctor {
   id: string;
@@ -28,17 +29,23 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalDoctors, setTotalDoctors] = useState(0);
   const [filters, setFilters] = useState({
     specialty: "",
     location: "",
     experience: 0,
     rating: 0,
+    consultMode: [] as string[],
+    fees: [] as string[],
+    language: [] as string[],
+    facility: [] as string[]
   });
+  const [sortBy, setSortBy] = useState("rating");
   const itemsPerPage = 5;
 
   useEffect(() => {
     fetchDoctors();
-  }, [currentPage, filters]);
+  }, [currentPage, filters, sortBy]);
 
   const fetchDoctors = async () => {
     try {
@@ -73,7 +80,7 @@ const Index = () => {
       // Execute the query
       const { data, error, count } = await query
         .range(from, to)
-        .order("rating", { ascending: false });
+        .order(sortBy === "rating" ? "rating" : "name", { ascending: sortBy !== "rating" });
       
       if (error) {
         console.error("Error fetching doctors:", error);
@@ -82,6 +89,7 @@ const Index = () => {
       
       setDoctors(data || []);
       if (count) {
+        setTotalDoctors(count);
         setTotalPages(Math.ceil(count / itemsPerPage));
       }
     } finally {
@@ -98,13 +106,27 @@ const Index = () => {
     setCurrentPage(page);
   };
 
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">General Physician & Internal Medicine</h1>
-        
+      <div className="border-b border-gray-200 bg-white">
+        <div className="container mx-auto px-4">
+          <nav className="flex py-4 text-sm">
+            <a href="#" className="text-blue-600 hover:underline">Home</a>
+            <span className="mx-2">›</span>
+            <a href="#" className="text-blue-600 hover:underline">Doctors</a>
+            <span className="mx-2">›</span>
+            <span className="text-gray-600">General Physicians</span>
+          </nav>
+        </div>
+      </div>
+      
+      <main className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Filter Sidebar */}
           <div className="w-full md:w-1/4">
@@ -113,6 +135,21 @@ const Index = () => {
           
           {/* Doctor Listing */}
           <div className="w-full md:w-3/4">
+            <div className="mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Consult General Physicians Online - Internal Medicine Specialists</h1>
+              <p className="text-gray-600 mt-1">({totalDoctors} doctors)</p>
+            </div>
+            
+            {/* Sort Options */}
+            <div className="flex justify-end mb-4">
+              <div className="relative inline-block">
+                <div className="flex items-center gap-2 border rounded-md p-2 cursor-pointer bg-white">
+                  <span className="font-medium">Relevance</span>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -132,50 +169,52 @@ const Index = () => {
                 )}
                 
                 {/* Pagination */}
-                <div className="mt-8">
-                  <Pagination>
-                    <PaginationContent>
-                      {currentPage > 1 && (
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            href="#" 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(currentPage - 1);
-                            }} 
-                          />
-                        </PaginationItem>
-                      )}
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink 
-                            href="#" 
-                            isActive={page === currentPage}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(page);
-                            }}
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      
-                      {currentPage < totalPages && (
-                        <PaginationItem>
-                          <PaginationNext 
-                            href="#" 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(currentPage + 1);
-                            }} 
-                          />
-                        </PaginationItem>
-                      )}
-                    </PaginationContent>
-                  </Pagination>
-                </div>
+                {totalPages > 1 && (
+                  <div className="mt-8">
+                    <Pagination>
+                      <PaginationContent>
+                        {currentPage > 1 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handlePageChange(currentPage - 1);
+                              }} 
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink 
+                              href="#" 
+                              isActive={page === currentPage}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handlePageChange(page);
+                              }}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        
+                        {currentPage < totalPages && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handlePageChange(currentPage + 1);
+                              }} 
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </>
             )}
           </div>
