@@ -3,7 +3,6 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin } from "lucide-react";
-import Image from "next/image";
 
 export const Header = () => {
   return (
